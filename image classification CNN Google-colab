@@ -1,0 +1,121 @@
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+import matplotlib.pyplot as plt
+import numpy as np
+from tensorflow.keras.preprocessing import image
+import cv2
+
+# Image Data Generator for training images with augmentation
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
+
+# Loading training dataset
+train_dataset = train_datagen.flow_from_directory(
+    '/content/drive/MyDrive/case2@new/train',
+    target_size=(150, 150),
+    batch_size=32,
+    class_mode='binary'
+)
+
+# Loading validation dataset (no augmentation for validation data)
+validation_datagen = ImageDataGenerator(rescale=1./255)
+
+validation_dataset = validation_datagen.flow_from_directory(
+    '/content/drive/MyDrive/case2@new/val',
+    target_size=(150, 150),
+    batch_size=32,
+    class_mode='binary'
+)
+
+# Build CNN model
+model = Sequential([
+    Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)),
+    MaxPooling2D(pool_size=(2, 2)),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D(pool_size=(2, 2)),
+    Conv2D(128, (3, 3), activation='relu'),
+    MaxPooling2D(pool_size=(2, 2)),
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.5),
+    Dense(1, activation='sigmoid')  # Binary classification
+])
+
+# Compile the model
+model.compile(optimizer=Adam(),
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+
+# Train the model
+model_fit = model.fit(train_dataset,
+                      steps_per_epoch=train_dataset.samples // train_dataset.batch_size,
+                      validation_data=validation_dataset,
+                      validation_steps=validation_dataset.samples // validation_dataset.batch_size,
+                      epochs=250)
+
+# Function to predict if an image is a correct or incorrect installation
+def predict_installation(image_path):
+    img = image.load_img(image_path, target_size=(150, 150))
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0) / 255.0
+    prediction = model.predict(img_array)
+    if prediction < 0.5:
+        print("correct")
+    else:
+        print("incorrect")
+
+# Example usage:
+predict_installation('/content/1 (2) 2.jpeg')
+img1 = cv2.imread('/content/1 (2) 2.jpeg')
+img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
+plt.imshow(img1)
+plt.show()
+
+print("==========================================================================================")
+predict_installation('/content/1 (4) 3.jpeg')
+img2 = cv2.imread('/content/1 (4) 3.jpeg')
+img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
+plt.imshow(img2)
+plt.show()
+
+print("===================================================================================")
+predict_installation('/content/1 (46).jpeg')
+img3 = cv2.imread('/content/1 (46).jpeg')
+img3 = cv2.cvtColor(img3, cv2.COLOR_BGR2RGB)
+plt.imshow(img3)
+plt.show()
+
+print("===========================================================================================")
+predict_installation('/content/1 (7).jpeg')
+img4 = cv2.imread('/content/1 (7).jpeg')
+img4 = cv2.cvtColor(img4, cv2.COLOR_BGR2RGB)
+plt.imshow(img4)
+plt.show()
+
+print("=================================================================================================")
+predict_installation('/content/INT0139030.jpg')
+img5 = cv2.imread('/content/INT0139030.jpg')
+img5 = cv2.cvtColor(img5, cv2.COLOR_BGR2RGB)
+plt.imshow(img5)
+plt.show()
+
+print("======================================================================================================")
+predict_installation("/content/INT0820675_1.jpg")
+img6 = cv2.imread("/content/INT0820675_1.jpg")
+img6 = cv2.cvtColor(img6, cv2.COLOR_BGR2RGB)
+plt.imshow(img6)
+plt.show()
+
+print("=========================================================================================================")
+predict_installation("/content/INT0112796.jpg")
+img7 = cv2.imread("/content/INT0112796.jpg")
+img7 = cv2.cvtColor(img7, cv2.COLOR_BGR2RGB)
+plt.imshow(img7)
+plt.show()
