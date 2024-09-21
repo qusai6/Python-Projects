@@ -1,0 +1,76 @@
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+def image_to_vector(image_path):
+    # Read the image
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    if image is None:
+        raise ValueError(f"Image not found or could not be loaded: {image_path}")
+    # Resize the image to a fixed size (optional)
+    image = cv2.resize(image, (128, 128))
+    # Flatten the image to a 1D array
+    vector = image.flatten()
+    return vector
+
+# Paths to your images
+image1_path = '/content/Cat.jfif'
+image2_path = '/content/Dog.jpg'
+
+
+
+
+
+image3_path = '/content/Cat-image.jfif'
+
+try:
+    # Convert images to vectors
+    vector1 = image_to_vector(image1_path)
+    vector2 = image_to_vector(image2_path)
+    vector3 = image_to_vector(image3_path)
+
+    # Calculate cosine similarities
+    similarity_1_with_3 = cosine_similarity([vector1], [vector3])[0][0]
+    similarity_2_with_3 = cosine_similarity([vector2], [vector3])[0][0]
+
+    # Determine which image is more similar to image 3
+    if similarity_1_with_3 > similarity_2_with_3:
+        result = "Image 1 is more similar to Image 3"
+    else:
+        result = "Image 2 is more similar to Image 3"
+
+    # Show all images with the result as the title
+    plt.figure(figsize=(12, 4))
+    
+    # Image 1
+    img1 = cv2.imread(image1_path)
+    img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
+    plt.subplot(1, 3, 1)
+    plt.imshow(img1)
+    plt.title('Image 1')
+    plt.axis('off')
+
+    # Image 2
+    img2 = cv2.imread(image2_path)
+    img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
+    plt.subplot(1, 3, 2)
+    plt.imshow(img2)
+    plt.title('Image 2')
+    plt.axis('off')
+
+    # Image 3
+    img3 = cv2.imread(image3_path)
+    img3 = cv2.cvtColor(img3, cv2.COLOR_BGR2RGB)
+    plt.subplot(1, 3, 3)
+    plt.imshow(img3)
+    plt.title('Image 3')
+    plt.axis('off')
+
+    # Set the overall title
+    plt.suptitle(result, fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Adjust title position
+    plt.show()
+
+except ValueError as e:
+    print(e)
