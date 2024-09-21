@@ -1,0 +1,83 @@
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, LSTM, Dense
+from keras.preprocessing.text import Tokenizer
+from keras.utils import pad_sequences
+
+# Load train and test datasets
+# Read input text file
+input_file = "C:/Users/user/Desktop/GOT.txt"
+with open(input_file, "r") as file:
+    text_data = file.readlines()
+
+# Preprocess the text data
+text_data = [text.strip().lower() for text in text_data]
+
+# Create tokenizer and fit on text data
+tokenizer = Tokenizer()
+tokenizer.fit_on_texts(text_data)
+total_words = len(tokenizer.word_index) + 1
+
+# Prepare input-output pairs
+input_sequences = []
+for line in text_data:
+    token_list = tokenizer.texts_to_sequences([line])[0]
+    for i in range(1, len(token_list)):
+        n_gram_sequence = token_list[:i + 1]
+        input_sequences.append(n_gram_sequence)
+
+# Pad sequences
+max_sequence_length = max([len(seq) for seq in input_sequences])
+input_sequences = np.array(pad_sequences(input_sequences, maxlen=max_sequence_length, padding='pre'))
+
+# Split into input and output
+x = input_sequences[:, :-1]
+y = input_sequences[:, -1]
+y = tf.keras.utils.to_categorical(y, num_classes=total_words)
+
+# Define the LSTM model
+model = Sequential()
+model.add(Embedding(total_words, 100, input_length=max_sequence_length - 1))
+model.add(LSTM(150))
+model.add(Dense(total_words, activation='softmax'))
+
+# Compile the model
+model.compile(loss='categorical_crossentropy', optimizer='adam')
+
+# Train the model
+model.fit(x, y, epochs=100, verbose=1)
+
+# Generate text
+seed_text = input_file
+next_words = 1000
+
+generated_text = []
+word_count = 0
+
+for _ in range(next_words):
+    token_list = tokenizer.texts_to_sequences([seed_text])[0]
+    token_list = pad_sequences([token_list], maxlen=max_sequence_length - 1, padding='pre')
+    predicted = np.argmax(model.predict(token_list), axis=-1)
+    
+    output_word = ""
+    for word, index in tokenizer.word_index.items():
+        if index == predicted:
+            output_word = word
+            break
+            
+    seed_text += " " + output_word
+    generated_text.append(output_word)
+    word_count += 1
+
+    # Add line break every 18 words
+    if word_count % 18 == 0:
+        generated_text.append("\n")
+
+# Write generated text to output text file
+output_file_path = "C:/Users/user/Desktop/newGOT.txt"
+with open(output_file_path, "w") as file:
+    file.write(" ".join(generated_text))
+
+print("Generated text saved to:", output_file_path)
