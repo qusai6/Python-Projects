@@ -1,0 +1,273 @@
+import string
+import warnings
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import nltk
+from nltk.stem import WordNetLemmatizer
+import getpass
+import random
+import re
+import csv
+
+# Downloads
+warnings.filterwarnings('ignore')
+nltk.download('popular', quiet=True)  # for downloading packages
+nltk.download('punkt')  # first-time use only
+nltk.download('wordnet')  # first-time use only
+
+# Reading in the corpus
+with open('C:/Users/user/Desktop/text chatbot/data@it@text.txt', 'r', encoding='utf8', errors='ignore') as fin:
+    raw = fin.read().lower()
+
+# Tokenisation
+sent_tokens = nltk.sent_tokenize(raw)
+word_tokens = nltk.word_tokenize(raw)
+
+# Preprocessing
+lemmer = WordNetLemmatizer()
+def LemTokens(tokens):
+    return [lemmer.lemmatize(token) for token in tokens]
+
+remove_punct_dict = dict((ord(punct), None) for punct in string.punctuation)
+def LemNormalize(text):
+    return LemTokens(nltk.word_tokenize(text.lower().translate(remove_punct_dict)))
+
+# Keyword Matching
+GREETING_INPUTS = ("hello", "hi", "greetings", "sup", "what's up", "hey")
+GREETING_RESPONSES = ["hi", "hey", "hi there", "hello"]
+
+def greeting(sentence):
+    """If user's input is a greeting, return a greeting response"""
+    for word in sentence.split():
+        if word.lower() in GREETING_INPUTS:
+            return random.choice(GREETING_RESPONSES)
+
+patterns = [
+    (r'hi|hello|hey', ['Hello!', 'Hi there!', 'Hey!', 'Wie geht es']),
+    (r'how are you?', ['I am good, thank you!', 'not bad?']),
+    (r'i am (.*)', ['That sounds interesting.', 'Tell me more about it.', 'That sounds nice.']),
+    (r'(.*) your name?', ['My name is college companion.', 'Meine Name is college companion.']),
+    (r'quit|exit', ['Bye!', 'Goodbye!', 'See you later!']),
+    (r'كيفك', ['الحمد لله، بخير!', 'لا بأس؟']),
+    (r'أنا (.*)', ['يبدو ذلك مثيرًا للاهتمام.', 'أخبرني المزيد عنه.', 'يبدو جميلًا.']),
+    (r'(.*) اسمك؟', ['college companion.', 'college companion.']),
+    (r'إنهاء', ['وداعًا!', 'إلى اللقاء!', 'أراك لاحقًا!']),
+    (r'who created you?', ['Qusai', 'قصي ']),
+    (r'who programmed you?', ['Qusai ', 'قصي ']),
+    (r'من برمجك؟', ['قصي ']),
+    (r'من عملك؟', ['قصي ']),
+    (r'من صنعك؟', ['قصي ']),
+    (r'أنا (.*)', ['يبدو ذلك مثيرًا للاهتمام.', 'أخبرني المزيد عنه.', 'يبدو جميلًا.']),
+    (r'إنهاء', ['وداعًا!', 'إلى اللقاء!', 'أراك لاحقًا!']),
+]
+
+def response(user_response):
+    for pattern, responses in patterns:
+        match = re.match(pattern, user_response)
+        if match:
+            response = random.choice(responses)
+            return response
+    # If no pattern matches, continue with the existing response mechanism
+    robo_response = ''
+    sent_tokens.append(user_response)
+    TfidfVec = TfidfVectorizer(tokenizer=LemNormalize, stop_words='english')
+    tfidf = TfidfVec.fit_transform(sent_tokens)
+    vals = cosine_similarity(tfidf[-1], tfidf)
+    idx = vals.argsort()[0][-2]
+    flat = vals.flatten()
+    flat.sort()
+    req_tfidf = flat[-2]
+    if(req_tfidf==0):
+        robo_response = "I am sorry! I don't understand you"  #اذا اقرب جملة للسؤال التشابه صفر مافي تطابق ما رح يفهم
+        return robo_response
+    else:
+        robo_response = robo_response + sent_tokens[idx]
+        return robo_response
+
+# mini Database اعتبارا ان هذا الشات بوت للجامعة ف ما رح يستخدمه غير طلاب الجامعة
+user_database = {
+    'faisal': '123',
+    'rami': '1234',
+    'salma': '12345',
+    'yazeed': '123456',
+    'sameer': '1234567',
+    'farah': '123456789'
+}
+
+# User signup
+def signup(username, password):
+    if username not in user_database:
+        user_database[username] = password
+        print("College Companion: Signup successful. You can now log in.")
+    else:
+        print("College Companion: Username already exists. Please choose a different username.")
+
+# User login
+def login(username, password):
+    if username in user_database and user_database[username] == password:
+        return True
+    else:
+        return False
+
+# Conversation loop
+print("College Companion: Welcome to College Companion!")
+print("College Companion: Are you a new user? (yes/no)")
+new_user = input().lower()
+
+if new_user == 'yes':
+    print("College Companion: Please enter a username:")
+    username = input()
+    password = getpass.getpass("College Companion: Please enter a password:")  # Hide password input
+    signup(username, password)
+else:
+    print("College Companion: Please enter your username:")
+    username = input()
+    password = getpass.getpass("College Companion: Please enter your password:")  # Hide password input
+    if login(username, password):
+        print("College Companion: Login successful!")
+        print("College Companion: You can now start chatting.")
+    else:
+        print("College Companion: Invalid username or password. Please try again.")
+
+# Load CSV data into memory
+course_data = {}
+with open('C:/Users/user/Desktop/course.csv', 'r') as csvfile:
+    reader = csv.reader(csvfile)
+    next(reader)  # Skip header row
+    for row in reader:
+        course_name = row[0].strip().lower()  # Course name in lowercase
+        prerequisites = row[1].strip()  # Prerequisites
+        course_data[course_name] = prerequisites
+
+# Function to get prerequisites for a course
+def get_prerequisites(course_name):
+    return course_data.get(course_name.strip().lower(), "Prerequisites not found for this course.")
+
+# Function to parse user query and extract course name using regular expressions
+def extract_course_name(user_query):
+    # Regular expression pattern to match various phrases indicating a query about prerequisites
+    prerequisite_pattern = re.compile(r'(?:know\s*)?(?:what\s*)?(?:the\s*)?(?:pre(?:requisite|requiset)s?)\s*(?:for|of)?\s*(.*)', re.IGNORECASE)
+    # Use regular expression to search for course name in user query
+    match = prerequisite_pattern.search(user_query)
+    if match:
+        course_name = match.group(1).strip()
+        return course_name
+    else:
+        return None
+
+# Load study plan data from CSV
+study_plan_data = {}
+with open('C:/Users/user/Desktop/plans@web.csv', 'r') as csvfile:
+    reader = csv.reader(csvfile)
+    next(reader)  # Skip header row
+    for row in reader:
+        major = row[0].strip().lower()  # Major name in lowercase
+        plan = row[1].strip()  # Study plan
+        study_plan_data[major] = plan
+
+# Function to get study plan for a major
+def get_study_plan(major):
+    return study_plan_data.get(major.lower(), "Study plan not found for this major.")
+
+def extract_major(user_query):
+    # Regular expression pattern to match phrases indicating a query about study plans
+    study_plan_pattern = re.compile(r'(?:study\s*plan\s*(?:for|of)?|what\s*the\s*study\s*plan\s*is|give\s*me\s*study\s*plan|you\s*know\s*study\s*plan)\s*(.*)', re.IGNORECASE)
+    # Use regular expression to search for major in user query
+    match = study_plan_pattern.search(user_query)
+    if match:
+        major = match.group(1).strip()
+        return major
+    else:
+        return None
+
+while True:
+    if not login(username, password):
+        print("College Companion: Please log in to continue.")
+        print("College Companion: Are you a new user? (yes/no)")
+        new_user = input().lower()
+
+        if new_user == 'yes':
+            print("College Companion: Please enter a username:")
+            username = input()
+            password = getpass.getpass("College Companion: Please enter a password:")  # Hide password input
+            signup(username, password)
+            continue  # Continue to the next iteration of the loop to prompt for login credentials again
+
+        else:
+            print("College Companion: Please enter your username:")
+            username = input()
+            password = getpass.getpass("College Companion: Please enter your password:")  # Hide password input
+            if login(username, password):
+                print("College Companion: Login successful!")
+                print("College Companion: You can now start chatting.")
+            else:
+                print("College Companion: Invalid username or password. Please try again.")
+    else:
+        # Existing user logged in, continue with conversation loop
+        user_response = input("You: ").lower()
+
+        # Check for inappropriate words in user response   اي كلام في اساءة رح توقف المحادثة
+        inappropriate_words = ['dog', 'bad', 'idiot', 'domie', 'غبي', 'حمار', 'كلب','يلعن','قليل ادب']
+        if any(word in user_response for word in inappropriate_words):
+            print("College Companion: I'm sorry, but I cannot continue this conversation.(هذا لا يمثل اخلاق طلاب جامعة البترا)")
+            break
+
+        if user_response == 'bye':
+            feedback = input("College Companion: take care, Please rate your satisfaction with the responses (1-5): ")
+            break
+
+        if greeting(user_response) is not None:
+            print("College Companion:", greeting(user_response))
+        else:
+            if "prerequisite" in user_response:
+                # Extract course name from user input using regular expressions
+                course_name = extract_course_name(user_response)
+                if course_name:
+                    prerequisites = get_prerequisites(course_name)
+                    print("College Companion: Prerequisite for", course_name, "is:", prerequisites)
+                else:
+                    print("College Companion: I'm sorry, I didn't understand the course name in your query.")
+            elif "study plan" in user_response:
+                # Extract major from user input using regular expressions
+                major = extract_major(user_response)
+                if major:
+                    study_plan = get_study_plan(major)
+                    print("College Companion: Study plan for", major, "is:", study_plan)
+                else:
+                    print("College Companion: I'm sorry, I couldn't understand your query about the study plan.")
+            else:
+                 print("College Companion: ", response(user_response))
+[nltk_data] Downloading package punkt to
+[nltk_data]     C:\Users\user\AppData\Roaming\nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+[nltk_data] Downloading package wordnet to
+[nltk_data]     C:\Users\user\AppData\Roaming\nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
+College Companion: Welcome to College Companion!
+College Companion: Are you a new user? (yes/no)
+no
+College Companion: Please enter your username:
+salma
+College Companion: Please enter your password:········
+College Companion: Login successful!
+College Companion: You can now start chatting.
+You: hey
+College Companion: hi
+You: who programmed you?
+College Companion:  قصي 
+You: how to know my gpa
+College Companion:  how to know the student gpa:
+step 1: log in to the electronic portal https://edugate.uop.edu.jo/"
+step 2: log in with the student id and password
+step 3: scroll down to the academic student information section, where you'll find the cumulative gpa, student ranking within the batch, and progress towards the academic plan.
+You: who is dr.abdel raouf ishtawi?
+College Companion:  dr. abdelraouf ishtawi is the head of the department of data science and artificial intelligence (office no 7400).
+You: what the cost for ai?
+College Companion:  the cost per credit hour for ai is 70jd.
+You: give me the study plan for ai
+College Companion: Study plan for ai is: StudyPlanAR.pdf (uop.edu.jo)
+You: what the Prerequisites for java 2
+College Companion: Prerequisite for java 2 is: java 1
+You: انت غبي
+College Companion: I'm sorry, but I cannot continue this conversation.(هذا لا يمثل اخلاق طلاب جامعة البترا)
