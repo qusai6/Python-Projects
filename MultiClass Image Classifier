@@ -1,0 +1,99 @@
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+import matplotlib.pyplot as plt
+import numpy as np
+from tensorflow.keras.preprocessing import image
+import os
+import shutil
+
+# Image data generator for loading and preprocessing images
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
+
+# Loading training images with multi-class mode
+train_dataset = train_datagen.flow_from_directory(
+    '/content/drive/MyDrive/multi_class/train',
+    target_size=(150, 150),
+    batch_size=32,
+    class_mode='categorical'  # Use 'categorical' for multi-class classification
+)
+
+# Validation dataset
+validation_datagen = ImageDataGenerator(rescale=1./255)
+
+validation_dataset = validation_datagen.flow_from_directory(
+    '/content/drive/MyDrive/multi_class/val',
+    target_size=(150, 150),
+    batch_size=32,
+    class_mode='categorical'  # Use 'categorical' for multi-class classification
+)
+
+# Build the CNN model
+model = Sequential([
+    Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)),
+    MaxPooling2D(pool_size=(2, 2)),
+    Conv2D(64, (3, 3), activation='relu'),
+    MaxPooling2D(pool_size=(2, 2)),
+    Conv2D(128, (3, 3), activation='relu'),
+    MaxPooling2D(pool_size=(2, 2)),
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.5),
+    Dense(4, activation='softmax')  # Output layer for 4 classes with 'softmax'
+])
+
+# Compile the model for multi-class classification
+model.compile(optimizer=Adam(),
+              loss='categorical_crossentropy',  # Use 'categorical_crossentropy' for multi-class classification
+              metrics=['accuracy'])
+
+# Train the model
+model_fit = model.fit(
+    train_dataset,
+    steps_per_epoch=train_dataset.samples // train_dataset.batch_size,
+    validation_data=validation_dataset,
+    validation_steps=validation_dataset.samples // validation_dataset.batch_size,
+    epochs=250
+)
+
+# Function to classify and save images
+def classify_and_save_images(model, images_path, save_base_path):
+    # Dictionary for class labels
+    class_labels = {0: 'BEP orange sticker', 1: 'Cabling system', 2: 'DB label', 3: 'modem'}
+
+    # Loop through each image in the test folder
+    for img_name in os.listdir(images_path):
+        img_path = os.path.join(images_path, img_name)
+        img = image.load_img(img_path, target_size=(150, 150))
+        img_array = image.img_to_array(img) / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
+
+        # Predict the class
+        prediction = model.predict(img_array)
+        predicted_class = np.argmax(prediction, axis=1)[0]
+        predicted_class_name = class_labels[predicted_class]
+
+        # Define the save path based on the class
+        save_class_path = os.path.join(save_base_path, predicted_class_name)
+
+        # Create folder if it doesn't exist
+        os.makedirs(save_class_path, exist_ok=True)
+
+        # Save the image to the corresponding folder
+        shutil.copy(img_path, os.path.join(save_class_path, img_name))
+
+# Define paths for classification
+images_to_classify_path = '/content/drive/MyDrive/multi_test'  # Path to the test folder
+save_directory = '/content/drive/MyDrive/case@multi.18.18.18/predictions'  # Path where classified images will be saved
+
+# Run the classification
+classify_and_save_images(model, images_to_classify_path, save_directory)
+
+print("Classification complete. Images saved to:", save_directory)
