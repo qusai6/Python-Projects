@@ -1,0 +1,55 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+
+# Load the dataset
+df = pd.read_csv('/content/heart.csv')
+
+# Display information about the DataFrame
+df.info()
+
+# Display descriptive statistics
+print(df.describe())
+
+# Show value counts of the target variable
+print(df['output'].value_counts())
+
+# Split the data into features and target variable
+x = df.drop(columns='output', axis=1)
+y = df['output']
+
+# Display feature data
+print(x)
+
+# Display target data
+print(y)
+
+# Split the data into training and testing sets
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+print(x.shape, x_train.shape, x_test.shape)
+
+# Create and train the Logistic Regression model
+model = LogisticRegression()
+model.fit(x_train, y_train)
+
+# Predict on training data and calculate accuracy
+x_train_prediction = model.predict(x_train)
+training_accuracy = accuracy_score(y_train, x_train_prediction)
+print("Training Accuracy:", training_accuracy)
+
+# Example input data for prediction
+input_data = (56, 1, 1, 120, 236, 0, 1, 178, 0, 0.8, 2, 0, 2)
+input_data_as_numpy_array = np.asarray(input_data)
+input_data_reshape = input_data_as_numpy_array.reshape(1, -1)
+
+# Make a prediction
+prediction = model.predict(input_data_reshape)
+print(prediction)
+
+# Display prediction result
+if prediction[0] == 0:
+    print('The person is not having an attack.')
+else:
+    print("The person has heart disease.")
